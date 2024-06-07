@@ -55,14 +55,14 @@ function Template(fn, parameters) {
 // The returned function has a `parameters` property,
 // which is an array of parameter descriptor objects,
 // each of which has a `key` property and possibly a `defaultValue` property.
-function parse(value) {
+function parse(value, customRegex) {
   switch (type(value)) {
     case 'string':
-      return parseString(value);
+      return parseString(value, customRegex);
     case 'object':
-      return parseObject(value);
+      return parseObject(value, customRegex);
     case 'array':
-      return parseArray(value);
+      return parseArray(value, customRegex);
     default:
       return Template(function () {
         return value;
@@ -77,11 +77,11 @@ const parseString = (() => {
   // template parameter syntax such as {{foo}} or {{foo:someDefault}}.
   const regex = /{{(\w|:|[\s-+.,@/\//()?=*_$])+}}/g;
 
-  return (str) => {
+  return (str, customRegex) => {
     let parameters = [];
     let templateFn = () => str;
 
-    const matches = str.match(regex);
+    const matches = str.match(customRegex || regex);
     if (matches) {
       parameters = matches.map(Parameter);
       templateFn = (context) => {
@@ -122,10 +122,10 @@ const parseString = (() => {
 })();
 
 // Parses non-leaf-nodes in the template object that are objects.
-function parseObject(object) {
+function parseObject(object, customRegex) {
   const children = Object.keys(object).map((key) => ({
-    keyTemplate: parseString(key),
-    valueTemplate: parse(object[key]),
+    keyTemplate: parseString(key, customRegex),
+    valueTemplate: parse(object[key], customRegex),
   }));
   const templateParameters = children.reduce(
     (parameters, child) =>
@@ -146,8 +146,8 @@ function parseObject(object) {
 }
 
 // Parses non-leaf-nodes in the template object that are arrays.
-function parseArray(array) {
-  const templates = array.map(parse);
+function parseArray(array, customRegex) {
+  const templates = array.map((value) => parse(value, customRegex));
   const templateParameters = templates.reduce(
     (parameters, template) => parameters.concat(template.parameters),
     [],
